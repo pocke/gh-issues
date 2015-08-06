@@ -43,6 +43,6 @@ func main() {
 	}
 
 	for _, v := range i {
-		fmt.Println(*v.Title)
+		fmt.Printf("%d %s\n", *v.Number, *v.Title)
 	}
 }

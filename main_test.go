@@ -29,3 +29,27 @@ func TestParseArgs(t *testing.T) {
 	shouldErr([]string{})
 	shouldErr([]string{"a", "b", "c"})
 }
+
+func TestDetectUserRepoFromGit(t *testing.T) {
+	assert := func(out, user, repo string) {
+		execGit = func() ([]byte, error) {
+			return []byte(out), nil
+		}
+
+		u, r, err := DetectUserRepoFromGit()
+		if err != nil {
+			t.Error(err)
+		}
+		if u != user {
+			t.Errorf("User Expected: %s, but got %s", user, u)
+		}
+		if r != repo {
+			t.Errorf("Repo Expected: %s, but got %s", repo, r)
+		}
+	}
+
+	assert(`origin	git@github.com:pocke/gh-issues.git (fetch)
+origin	git@github.com:pocke/gh-issues.git (push)`, "pocke", "gh-issues")
+	assert(`origin	https://github.com/pocke/gh-issues (fetch)
+origin	git@github.com:pocke/gh-issues.git (push)`, "pocke", "gh-issues")
+}

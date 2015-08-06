@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/google/go-github/github"
@@ -24,6 +26,26 @@ func ParseArgs(args []string) (user, repo string, err error) {
 	}
 }
 
+// mockable
+var execGit = func() ([]byte, error) {
+	return exec.Command("git", "remote", "-v").Output()
+}
+
+func DetectUserRepoFromGit() (user, repo string, err error) {
+	o, err := execGit()
+	if err != nil {
+		return "", "", err
+	}
+	s := strings.Split(string(o), "\n")[0]
+	re := regexp.MustCompile(`origin\s+.+github\.com.+?([[:alnum:]][[:alnum:]-]*)/([[:alnum:]._-]+?)(?:\.git)?\s+\(.+\)$`)
+	ma := re.FindStringSubmatch(s)
+	user, repo = ma[1], ma[2]
+	if user == "" || repo == "" {
+		return "", "", fmt.Errorf("Cannot detect user/repo from git")
+	}
+	return user, repo, nil
+}
+
 func E(err error) {
 	fmt.Fprintln(os.Stderr, err)
 	os.Exit(1)
@@ -32,7 +54,10 @@ func E(err error) {
 func main() {
 	user, repo, err := ParseArgs(os.Args[1:])
 	if err != nil {
-		E(err)
+		user, repo, err = DetectUserRepoFromGit()
+		if err != nil {
+			E(err)
+		}
 	}
 
 	c := github.NewClient(nil)
